@@ -2,7 +2,7 @@
   // ชื่อ Worker ต้องตรงกับที่ตั้งไว้ใน Cloudflare dashboard ก่อน push ครั้งแรก
   "name": "walkie-talkie-pe1",
   // account_id ไม่ใช่ความลับ (เห็นได้ใน URL ของ dashboard) — ใส่ค่าจริงก่อน deploy ครั้งแรก
-  "account_id": "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID",
+  "account_id": "e87e6b4e7ec59834a35db192e7e37eb8",
   "compatibility_date": "2026-08-23",
   "assets": {
     // ชี้ไป dist/ เพราะโปรเจกต์นี้มี Vite build step ก่อน deploy (ต่างจาก Single HTML File เดิมที่ชี้ "./")

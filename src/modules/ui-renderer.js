@@ -14,6 +14,19 @@ import { exportWorkbook, importWorkbookFile } from './excel-io.js';
 let state = { radios: [], accessories: [], inspections: [], repairs: [] };
 let activeTab = 'dashboard';
 let activeMonth = new Date().toISOString().slice(0, 7);
+let badgeSvgMarkup = '';
+
+// ต้อง inline <svg> เข้า DOM ตรงๆ ไม่ใช่ <img src="...svg"> — Chrome ไม่รัน CSS animation
+// ของไฟล์ SVG ที่โหลดผ่าน <img> เลย (ค้างที่ keyframe 0% opacity:0 ของ .tube ตลอดไป)
+async function loadBadge() {
+  try {
+    const res = await fetch('/vendor/branding/aicoder-badge.svg');
+    const text = await res.text();
+    badgeSvgMarkup = text.replace('width="1200" height="300"', 'width="280" height="70"');
+  } catch {
+    badgeSvgMarkup = ''; // โหลดไม่ได้ก็แค่ไม่มีแบดจ์ ไม่กระทบการใช้งานแอป
+  }
+}
 
 const $app = () => document.getElementById('app');
 
@@ -79,9 +92,21 @@ function render() {
       ${renderTabs()}
       <div class="mt-6">${renderActiveTab()}</div>
     </main>
+    ${renderFooter()}
   `;
   icons();
   attachGlobalHandlers();
+}
+
+// แบดจ์ A(i)CODER — พื้นสว่างคงที่ตายตัว ไม่สลับตามธีมแอป (ตามมาตรฐาน checklist ของ Supasit.A)
+function renderFooter() {
+  return `
+    <footer class="max-w-6xl mx-auto px-4 md:px-8 pb-8 flex justify-center">
+      <div class="inline-flex rounded-xl overflow-hidden shadow-sm" style="background:#F7F5FB" role="img" aria-label="A(i)CODER">
+        ${badgeSvgMarkup}
+      </div>
+    </footer>
+  `;
 }
 
 function renderHeader() {
@@ -590,7 +615,7 @@ export const UIRenderer = {
     } catch {
       /* ไม่มี localStorage ก็ใช้ light mode เป็นค่าเริ่มต้น */
     }
-    await loadAll();
+    await Promise.all([loadAll(), loadBadge()]);
     render();
   }
 };

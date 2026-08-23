@@ -1,0 +1,22 @@
+{
+  "name": "walkie-talkie-pe1",
+  "version": "1.0.0",
+  "description": "Radio asset, monthly inspection, and repair history tracker for PE1 (GC-M PTA)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "Supasit.A",
+  "license": "ISC",
+  "devDependencies": {
+    "lucide": "^1.33.0",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

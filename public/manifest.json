@@ -1,0 +1,12 @@
+{
+  "name": "Walkie Talkie Tracker — PE1",
+  "short_name": "WT Tracker",
+  "description": "รายการวิทยุสื่อสาร ตรวจสภาพประจำเดือน และประวัติการซ่อมแซม แผนกผลิต 1 (PE1)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#131b2c",
+  "theme_color": "#131b2c",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

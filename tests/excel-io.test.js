@@ -13,18 +13,28 @@ import {
 describe('Radios row mapping round-trip', () => {
   it('keeps every field identical after export -> import', () => {
     const radios = [
-      { id: 'r1', serieNo: '16D26A1281', position: 'CTA1 F/M', section: 'PE1', remark: '' },
-      { id: 'r2', serieNo: '17306A1479', position: 'PTA1 F/M', section: 'PE1', remark: 'จอมัว' }
+      { id: 'r1', serieNo: '16D26A1281', position: 'CTA1 F/M', section: 'PE1', remark: '', order: 1000 },
+      { id: 'r2', serieNo: '17306A1479', position: 'PTA1 F/M', section: 'PE1', remark: 'จอมัว', order: 2000 }
     ];
     const roundTripped = rowsToRadios(radiosToRows(radios));
     expect(roundTripped).toEqual(radios);
   });
 
-  it('generates a fresh id for a hand-added row with no ID column', () => {
+  it('generates a fresh id for a hand-added row with no ID column, and falls back to sheet order', () => {
     const rows = [{ 'Serie No.': '99999X0001', Position: 'PE1 spare 03', Section: 'PE1', Remark: '' }];
     const [radio] = rowsToRadios(rows);
     expect(radio.id).toBeTruthy();
     expect(radio.serieNo).toBe('99999X0001');
+    expect(radio.order).toBe(0);
+  });
+
+  it('keeps the sheet row order (top to bottom) as the imported order when re-imported', () => {
+    const radios = [
+      { id: 'r1', serieNo: 'A', position: 'CTA1 F/M', section: 'PE1', remark: '', order: 500 },
+      { id: 'r2', serieNo: 'B', position: 'PTA1 F/M', section: 'PE1', remark: '', order: 100 }
+    ];
+    const roundTripped = rowsToRadios(radiosToRows(radios));
+    expect(roundTripped.map((r) => r.order)).toEqual([500, 100]);
   });
 });
 
@@ -33,7 +43,9 @@ describe('Accessories row mapping round-trip', () => {
   const radioIdBySerieNo = new Map([['16D26A1281', 'r1']]);
 
   it('keeps radioId identical after export -> import via the raw ID column', () => {
-    const accessories = [{ id: 'a1', radioId: 'r1', details: 'แท่นชาร์จ+แบตเตอรี่ (CTA1 F/M)', remark: '' }];
+    const accessories = [
+      { id: 'a1', radioId: 'r1', details: 'แท่นชาร์จ+แบตเตอรี่ (CTA1 F/M)', remark: '', order: 1000 }
+    ];
     const roundTripped = rowsToAccessories(accessoriesToRows(accessories, radiosById), radioIdBySerieNo);
     expect(roundTripped).toEqual(accessories);
   });

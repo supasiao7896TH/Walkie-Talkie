@@ -38,8 +38,15 @@ function todayStr() {
 
 // ---------------------------------------------------------------- data ----
 
+// เรียงตาม order (วันเวลาสร้าง) เสมอ กัน IndexedDB คืนลำดับตาม key (UUID) ซึ่งดูสลับไปมา
+function sortByOrder(list) {
+  return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
 async function loadAll() {
   state = await StorageEngine.loadAll();
+  state.radios = sortByOrder(state.radios);
+  state.accessories = sortByOrder(state.accessories);
 }
 
 function statusBadge(status) {
@@ -460,7 +467,8 @@ function attachRadiosHandlers() {
       serieNo: fd.get('serieNo').trim(),
       position: fd.get('position').trim(),
       section: SECTION,
-      remark: fd.get('remark').trim()
+      remark: fd.get('remark').trim(),
+      order: Date.now()
     });
     await loadAll();
     render();
@@ -485,7 +493,8 @@ function attachAccessoriesHandlers() {
       id: crypto.randomUUID(),
       radioId: fd.get('radioId'),
       details: fd.get('details').trim(),
-      remark: fd.get('remark').trim()
+      remark: fd.get('remark').trim(),
+      order: Date.now()
     });
     await loadAll();
     render();

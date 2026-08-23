@@ -1,48 +1,52 @@
 /* global XLSX */
-// XLSX โหลดผ่าน CDN <script> ใน index.html (ดู DS-8 pattern เดียวกับ Lucide แต่ XLSX ยังใช้ CDN ตรงตาม
-// tech stack มาตรฐานของพี่ A — ไม่ vendor เพราะไฟล์ใหญ่และอัปเดตบ่อยกว่า)
+// XLSX vendor ไว้ที่ public/vendor/xlsx.full.min.js (ดู DS-8 pattern เดียวกับ Lucide) —
+// ไม่ใช้ CDN เพราะ npm registry version มีช่องโหว่ high severity ที่ยังไม่ patch
 
 // ---- Pure mapping functions (มี Vitest คุ้มครอง — ดู tests/excel-io.test.js) ----
 
 export function radiosToRows(radios) {
-  return radios.map((r) => ({
+  return radios.map((r, i) => ({
     ID: r.id,
     'Serie No.': r.serieNo,
     Position: r.position,
     Section: r.section,
-    Remark: r.remark || ''
+    Remark: r.remark || '',
+    Order: r.order ?? i
   }));
 }
 
 export function rowsToRadios(rows) {
-  return rows.map((row) => ({
+  return rows.map((row, i) => ({
     id: String(row.ID || '').trim() || crypto.randomUUID(),
     serieNo: String(row['Serie No.'] || '').trim(),
     position: String(row.Position || '').trim(),
     section: String(row.Section || '').trim(),
-    remark: String(row.Remark || '').trim()
+    remark: String(row.Remark || '').trim(),
+    order: row.Order === '' || row.Order === undefined ? i : Number(row.Order)
   }));
 }
 
 export function accessoriesToRows(accessories, radiosById) {
-  return accessories.map((a) => ({
+  return accessories.map((a, i) => ({
     ID: a.id,
     'Radio ID': a.radioId,
     'Radio Serie No.': radiosById.get(a.radioId)?.serieNo || '',
     Details: a.details,
-    Remark: a.remark || ''
+    Remark: a.remark || '',
+    Order: a.order ?? i
   }));
 }
 
 export function rowsToAccessories(rows, radioIdBySerieNo) {
-  return rows.map((row) => {
+  return rows.map((row, i) => {
     const explicitRadioId = String(row['Radio ID'] || '').trim();
     const serieNo = String(row['Radio Serie No.'] || '').trim();
     return {
       id: String(row.ID || '').trim() || crypto.randomUUID(),
       radioId: explicitRadioId || radioIdBySerieNo.get(serieNo) || '',
       details: String(row.Details || '').trim(),
-      remark: String(row.Remark || '').trim()
+      remark: String(row.Remark || '').trim(),
+      order: row.Order === '' || row.Order === undefined ? i : Number(row.Order)
     };
   });
 }

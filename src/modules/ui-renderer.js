@@ -487,9 +487,9 @@ function reportStatusColor(status) {
 
 // ตาราง/สถิติในรายงานใช้สีตายตัวเสมอ (ไม่อิง CSS variable ธีมแอป) เพราะภาพที่ copy
 // ไปวางในอีเมลต้องอ่านง่ายบนพื้นขาวเสมอ ไม่ว่าตอน capture แอปจะอยู่ธีมไหน
-function reportStat(label, value) {
+function reportStat(label, value, colorHex) {
   return `
-    <div style="background:#F7F9FC;border:1px solid #D6DEEE;border-radius:9px;padding:8px 14px;min-width:120px">
+    <div style="background:#F7F9FC;border:1px solid #D6DEEE;border-top:3px solid ${colorHex};border-radius:9px;padding:8px 14px;min-width:120px">
       <div style="font-size:11px;color:#5F6980">${label}</div>
       <div style="font-size:18px;font-weight:700;color:#131829">${value}</div>
     </div>
@@ -558,14 +558,14 @@ function renderReport() {
           </button>
         </div>
       </div>
-      <div id="report-capture" style="background:#FFFFFF;border:1px solid #D6DEEE;border-radius:13px;padding:20px">
+      <div id="report-capture" style="background:#FFFFFF;border:1px solid #D6DEEE;border-top:4px solid #1D4ED8;border-radius:13px;padding:20px">
         <p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8A6410;margin:0 0 4px">แผนก ${SECTION}</p>
         <h2 style="font-size:20px;font-weight:700;color:#131829;margin:0 0 12px">รายงานผลตรวจสภาพวิทยุ/อุปกรณ์เสริม — เดือน ${activeMonth}</h2>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
-          ${reportStat('วิทยุทั้งหมด', state.radios.length)}
-          ${reportStat('อุปกรณ์เสริมทั้งหมด', state.accessories.length)}
-          ${reportStat('Abnormal เดือนนี้', abnormalCount)}
-          ${reportStat('ซ่อมค้าง', openRepairsCount)}
+          ${reportStat('วิทยุทั้งหมด', state.radios.length, '#1D4ED8')}
+          ${reportStat('อุปกรณ์เสริมทั้งหมด', state.accessories.length, '#B2BFD8')}
+          ${reportStat('Abnormal เดือนนี้', abnormalCount, '#B3261E')}
+          ${reportStat('ซ่อมค้าง', openRepairsCount, '#8A5A08')}
         </div>
         ${reportTable('วิทยุ', radioRows)}
         ${reportTable('อุปกรณ์เสริม', accessoryRows)}

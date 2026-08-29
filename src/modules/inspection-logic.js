@@ -35,6 +35,21 @@ export function shouldCreateRepair(inspection, repairs) {
   return findOpenRepair(repairs, inspection.targetType, inspection.targetId) === null;
 }
 
+/** แถวรายงานประจำเดือน — สถานะตรวจของแต่ละ item เฉพาะเดือนที่ระบุ (ไม่ใช่สถานะล่าสุดโดยรวม) */
+export function buildMonthlyStatusRows(items, inspections, targetType, yearMonth, labelFn) {
+  return items.map((item) => {
+    const insp = inspections.find(
+      (i) => i.targetType === targetType && i.targetId === item.id && i.yearMonth === yearMonth
+    );
+    return {
+      id: item.id,
+      label: labelFn(item),
+      status: insp?.status || null,
+      remark: insp?.remark || ''
+    };
+  });
+}
+
 export function buildRepairFromInspection(inspection, today = new Date().toISOString().slice(0, 10)) {
   return {
     id: crypto.randomUUID(),

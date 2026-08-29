@@ -600,20 +600,31 @@ function attachInspectionHandlers() {
 
 function attachRepairsHandlers() {
   document.querySelectorAll('[data-repair-row]').forEach((row) => {
+    const statusSelect = row.querySelector('[data-repair-status]');
+    const completedInput = row.querySelector('[data-repair-completed]');
+
     const save = async () => {
       const id = row.dataset.repairRow;
       const existing = state.repairs.find((r) => r.id === id);
       if (!existing) return;
       await StorageEngine.repairs.put({
         ...existing,
-        status: row.querySelector('[data-repair-status]').value,
-        completedDate: row.querySelector('[data-repair-completed]').value || null,
+        status: statusSelect.value,
+        completedDate: completedInput.value || null,
         result: row.querySelector('[data-repair-result]').value.trim()
       });
       await loadAll();
+      render();
     };
-    row.querySelector('[data-repair-status]').addEventListener('change', save);
-    row.querySelector('[data-repair-completed]').addEventListener('change', save);
+
+    completedInput.addEventListener('change', () => {
+      // กรอกวันที่เสร็จ = ถือว่าซ่อมเสร็จแล้ว เว้นแต่สถานะถูกปิดไปแล้ว (เช่น จำหน่ายทิ้ง)
+      if (completedInput.value && OPEN_REPAIR_STATUSES.includes(statusSelect.value)) {
+        statusSelect.value = REPAIR_STATUS.DONE;
+      }
+      save();
+    });
+    statusSelect.addEventListener('change', save);
     row.querySelector('[data-repair-result]').addEventListener('change', save);
   });
 }

@@ -442,7 +442,7 @@ function renderRepairs() {
           : `<div class="overflow-x-auto"><table class="w-full text-sm">
               <thead><tr class="text-left" style="color:var(--text-2)">
                 <th class="py-2 pr-4">อุปกรณ์</th><th class="py-2 pr-4">วันที่แจ้งซ่อม</th><th class="py-2 pr-4">อาการ</th>
-                <th class="py-2 pr-4">สถานะ</th><th class="py-2 pr-4">วันที่เสร็จ</th><th class="py-2">ผลการซ่อม</th>
+                <th class="py-2 pr-4">สถานะ</th><th class="py-2 pr-4">วันที่เสร็จ</th><th class="py-2 pr-4">ผลการซ่อม</th><th class="py-2"></th>
               </tr></thead>
               <tbody>
                 ${rows
@@ -459,7 +459,8 @@ function renderRepairs() {
                         </select>
                       </td>
                       <td class="py-2 pr-4"><input type="date" class="input px-2 py-1 text-sm" data-repair-completed value="${r.completedDate || ''}" /></td>
-                      <td class="py-2"><input class="input px-2 py-1 text-sm w-full" data-repair-result placeholder="ผลการซ่อม" value="${r.result || ''}" /></td>
+                      <td class="py-2 pr-4"><input class="input px-2 py-1 text-sm w-full" data-repair-result placeholder="ผลการซ่อม" value="${r.result || ''}" /></td>
+                      <td class="py-2"><button data-del-repair="${r.id}" class="icon-btn icon-btn-danger" aria-label="ลบประวัติการซ่อม ${targetLabel(r.targetType, r.targetId)}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button></td>
                     </tr>`
                   )
                   .join('')}
@@ -495,13 +496,18 @@ function reportStat(label, value) {
   `;
 }
 
+// colgroup เดียวกันบังคับใช้กับทั้ง 2 ตาราง (วิทยุ/อุปกรณ์เสริม) ไม่งั้นแต่ละตารางจะคำนวณความกว้าง
+// คอลัมน์เองตามความยาว label ของตัวเอง ทำให้คอลัมน์ "สถานะ" เหลื่อมกันระหว่าง 2 ตาราง
+const REPORT_TABLE_COLGROUP = `<colgroup><col style="width:50%" /><col style="width:20%" /><col style="width:30%" /></colgroup>`;
+
 function reportTable(title, rows) {
   return `
     <h3 style="font-weight:700;font-size:14px;margin:20px 0 8px;color:#131829">${title} (${rows.length})</h3>
     ${
       rows.length === 0
         ? `<p style="font-size:13px;color:#5F6980;padding:12px 0">ยังไม่มีรายการ</p>`
-        : `<table style="width:100%;font-size:13px;border-collapse:collapse">
+        : `<table style="width:100%;font-size:13px;border-collapse:collapse;table-layout:fixed">
+            ${REPORT_TABLE_COLGROUP}
             <thead><tr style="text-align:left;color:#414A60">
               <th style="padding:6px 12px 6px 0;border-bottom:1px solid #D6DEEE">รายการ</th>
               <th style="padding:6px 12px 6px 0;border-bottom:1px solid #D6DEEE">สถานะ</th>
@@ -838,6 +844,15 @@ function attachRepairsHandlers() {
     statusSelect.addEventListener('change', save);
     row.querySelector('[data-repair-result]').addEventListener('change', save);
   });
+
+  document.querySelectorAll('[data-del-repair]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('ลบประวัติการซ่อมรายการนี้? การลบนี้ไม่สามารถย้อนกลับได้')) return;
+      await StorageEngine.repairs.remove(btn.dataset.delRepair);
+      await loadAll();
+      render();
+    })
+  );
 }
 
 function attachReportHandlers() {

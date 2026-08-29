@@ -6,7 +6,16 @@ import {
   buildRepairFromInspection,
   findOpenRepair
 } from './inspection-logic.js';
-import { SECTION, TARGET_TYPE, INSPECTION_STATUS, REPAIR_STATUS, OPEN_REPAIR_STATUSES } from './app-config.js';
+import {
+  SECTION,
+  TARGET_TYPE,
+  INSPECTION_STATUS,
+  REPAIR_STATUS,
+  OPEN_REPAIR_STATUSES,
+  BADGE_TONE_CLASSES,
+  INSPECTION_STATUS_TONE,
+  REPAIR_STATUS_TONE
+} from './app-config.js';
 import { exportWorkbook, importWorkbookFile } from './excel-io.js';
 
 /* global lucide */
@@ -14,17 +23,22 @@ import { exportWorkbook, importWorkbookFile } from './excel-io.js';
 let state = { radios: [], accessories: [], inspections: [], repairs: [] };
 let activeTab = 'dashboard';
 let activeMonth = new Date().toISOString().slice(0, 7);
-let badgeSvgMarkup = '';
+let brandDockLightSvg = '';
+let brandDockDarkSvg = '';
 
 // ต้อง inline <svg> เข้า DOM ตรงๆ ไม่ใช่ <img src="...svg"> — Chrome ไม่รัน CSS animation
 // ของไฟล์ SVG ที่โหลดผ่าน <img> เลย (ค้างที่ keyframe 0% opacity:0 ของ .tube ตลอดไป)
-async function loadBadge() {
+async function loadBrandDockAssets() {
   try {
-    const res = await fetch('/vendor/branding/aicoder-badge.svg');
-    const text = await res.text();
-    badgeSvgMarkup = text.replace('width="1200" height="300"', 'width="280" height="70"');
+    const [light, dark] = await Promise.all([
+      fetch('/vendor/branding/d1-neon-arcade-bare.svg').then((r) => r.text()),
+      fetch('/vendor/branding/d2-crt-night-bare.svg').then((r) => r.text())
+    ]);
+    brandDockLightSvg = light.replace('<svg ', '<svg class="mark-light" ');
+    brandDockDarkSvg = dark.replace('<svg ', '<svg class="mark-dark" ');
   } catch {
-    badgeSvgMarkup = ''; // โหลดไม่ได้ก็แค่ไม่มีแบดจ์ ไม่กระทบการใช้งานแอป
+    brandDockLightSvg = '';
+    brandDockDarkSvg = ''; // โหลดไม่ได้ก็แค่ไม่มี brand dock ไม่กระทบการใช้งานแอป
   }
 }
 
@@ -33,9 +47,9 @@ const $app = () => document.getElementById('app');
 // แจ้งเตือนแบบไม่บล็อกหน้าจอ (แทน alert() ซึ่งค้างทั้งแท็บจนกว่าจะกด OK)
 function toast(message) {
   const el = document.createElement('div');
-  el.className =
-    'tactile-sm fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 text-sm font-semibold z-50 animate-fade-in border-t-4 border-emerald-500';
-  el.style.color = 'var(--text-primary)';
+  el.className = 'toast fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 text-sm font-semibold z-50 animate-fade-in';
+  el.setAttribute('role', 'alert');
+  el.setAttribute('aria-live', 'polite');
   el.textContent = message;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 4000);
@@ -62,24 +76,18 @@ async function loadAll() {
   state.accessories = sortByOrder(state.accessories);
 }
 
+function badge(tone, label) {
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${BADGE_TONE_CLASSES[tone] || BADGE_TONE_CLASSES.muted}">${label}</span>`;
+}
+
 function statusBadge(status) {
-  if (status === INSPECTION_STATUS.ABNORMAL) {
-    return `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/15 text-red-600 dark:text-red-400">Abnormal</span>`;
-  }
-  if (status === INSPECTION_STATUS.NORMAL) {
-    return `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">Normal</span>`;
-  }
-  return `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-500/15 text-slate-500">ยังไม่ตรวจ</span>`;
+  if (status === INSPECTION_STATUS.ABNORMAL) return badge(INSPECTION_STATUS_TONE[status], 'Abnormal');
+  if (status === INSPECTION_STATUS.NORMAL) return badge(INSPECTION_STATUS_TONE[status], 'Normal');
+  return badge('muted', 'ยังไม่ตรวจ');
 }
 
 function repairStatusBadge(status) {
-  const colors = {
-    [REPAIR_STATUS.PENDING]: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-    [REPAIR_STATUS.IN_PROGRESS]: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
-    [REPAIR_STATUS.DONE]: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-    [REPAIR_STATUS.DISPOSED]: 'bg-slate-500/15 text-slate-500'
-  };
-  return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${colors[status] || ''}">${status}</span>`;
+  return badge(REPAIR_STATUS_TONE[status], status);
 }
 
 // ------------------------------------------------------------- render ----
@@ -88,45 +96,45 @@ function render() {
   const el = $app();
   el.innerHTML = `
     ${renderHeader()}
-    <main class="max-w-6xl mx-auto px-4 md:px-8 py-6">
+    <main class="max-w-6xl mx-auto px-4 md:px-8 pt-6 dock-space">
       ${renderTabs()}
       <div class="mt-6">${renderActiveTab()}</div>
     </main>
-    ${renderFooter()}
+    ${renderBrandDock()}
   `;
   icons();
   attachGlobalHandlers();
 }
 
-// แบดจ์ A(i)CODER — พื้นสว่างคงที่ตายตัว ไม่สลับตามธีมแอป (ตามมาตรฐาน checklist ของ Supasit.A)
-function renderFooter() {
+// ST-15 Brand Dock — แถบล่างถาวรเต็มความกว้าง พื้นกลืนกับธีมแอปเองผ่าน var(--surface)
+function renderBrandDock() {
   return `
-    <footer class="max-w-6xl mx-auto px-4 md:px-8 pb-8 flex justify-center">
-      <div class="inline-flex rounded-xl overflow-hidden shadow-sm" style="background:#F7F5FB" role="img" aria-label="A(i)CODER">
-        ${badgeSvgMarkup}
-      </div>
-    </footer>
+    <div class="brand-dock" role="img" aria-label="สร้างโดย A(i)CODER">
+      ${brandDockLightSvg}
+      ${brandDockDarkSvg}
+    </div>
   `;
 }
 
 function renderHeader() {
+  const isDark = document.documentElement.classList.contains('dark');
   return `
-    <header class="border-b border-black/5 dark:border-white/5">
+    <header class="border-b border-[var(--border)]">
       <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold gradient-text">Walkie Talkie Tracker</h1>
-          <p class="text-sm" style="color:var(--text-secondary)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
+          <h1 class="text-2xl md:text-3xl font-bold" style="color:var(--text)">Walkie Talkie Tracker</h1>
+          <p class="text-sm" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
         </div>
         <div class="flex items-center gap-2">
-          <button id="btn-export" class="tactile-btn px-3 py-2 flex items-center gap-2 text-sm font-semibold" style="color:var(--text-primary)">
-            <i data-lucide="download" class="w-4 h-4"></i> Export
+          <button id="btn-export" class="btn px-4 text-sm">
+            <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i> Export
           </button>
-          <label class="tactile-btn px-3 py-2 flex items-center gap-2 text-sm font-semibold cursor-pointer" style="color:var(--text-primary)">
-            <i data-lucide="upload" class="w-4 h-4"></i> Import
+          <label class="btn px-4 text-sm cursor-pointer">
+            <i data-lucide="upload" class="w-4 h-4" aria-hidden="true"></i> Import
             <input id="input-import" type="file" accept=".xlsx" class="hidden" />
           </label>
-          <button id="btn-theme" class="tactile-btn p-2" title="สลับโหมดสี">
-            <i data-lucide="moon" class="w-4 h-4"></i>
+          <button id="btn-theme" class="btn btn-icon" aria-label="สลับโหมดสี" aria-pressed="${isDark}" title="สลับโหมดสี">
+            <i data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -147,10 +155,10 @@ function renderTabs() {
     <nav class="flex flex-wrap gap-2">
       ${TABS.map(
         (t) => `
-        <button data-tab="${t.id}" class="tab-btn tactile-btn px-4 py-2 flex items-center gap-2 text-sm font-semibold ${
-          activeTab === t.id ? 'ring-2 ring-teal-500' : ''
-        }" style="color:var(--text-primary)">
-          <i data-lucide="${t.icon}" class="w-4 h-4"></i> ${t.label}
+        <button data-tab="${t.id}" class="tab-btn btn px-4 text-sm ${
+          activeTab === t.id ? 'tab-active' : ''
+        }">
+          <i data-lucide="${t.icon}" class="w-4 h-4" aria-hidden="true"></i> ${t.label}
         </button>`
       ).join('')}
     </nav>
@@ -176,14 +184,14 @@ function renderActiveTab() {
 
 // --------------------------------------------------------- dashboard -----
 
-function kpiCard(label, value, colorClass, icon) {
+function kpiCard(label, value, colorVar, icon) {
   return `
-    <div class="tactile border-t-4 ${colorClass} p-5">
+    <div class="card p-5" style="border-top:4px solid var(${colorVar})">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-semibold" style="color:var(--text-secondary)">${label}</span>
-        <i data-lucide="${icon}" class="w-5 h-5" style="color:var(--text-tertiary)"></i>
+        <span class="text-sm font-semibold" style="color:var(--text-2)">${label}</span>
+        <i data-lucide="${icon}" class="w-5 h-5" style="color:var(--text-3)" aria-hidden="true"></i>
       </div>
-      <p class="text-3xl font-extrabold mt-2" style="color:var(--text-primary)">${value}</p>
+      <p class="text-3xl font-bold mt-2" style="color:var(--text)">${value}</p>
     </div>
   `;
 }
@@ -203,25 +211,25 @@ function renderDashboard() {
 
   return `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      ${kpiCard('วิทยุทั้งหมด', totalRadios, 'border-blue-500', 'radio')}
-      ${kpiCard('อุปกรณ์เสริมทั้งหมด', totalAccessories, 'border-purple-500', 'battery-charging')}
-      ${kpiCard(`Abnormal เดือน ${activeMonth}`, abnormalThisMonth, 'border-red-500', 'alert-triangle')}
-      ${kpiCard('ซ่อมค้าง (รอ/กำลังซ่อม)', openRepairs.length, 'border-amber-500', 'wrench')}
+      ${kpiCard('วิทยุทั้งหมด', totalRadios, '--accent', 'radio')}
+      ${kpiCard('อุปกรณ์เสริมทั้งหมด', totalAccessories, '--border-strong', 'battery-charging')}
+      ${kpiCard(`Abnormal เดือน ${activeMonth}`, abnormalThisMonth, '--crit', 'alert-triangle')}
+      ${kpiCard('ซ่อมค้าง (รอ/กำลังซ่อม)', openRepairs.length, '--warn', 'wrench')}
     </div>
 
-    <div class="tactile p-5 mt-6">
-      <h2 class="font-bold mb-3 flex items-center gap-2" style="color:var(--text-primary)"><i data-lucide="wrench" class="w-4 h-4"></i> รายการซ่อมที่ยังไม่เสร็จ</h2>
+    <div class="card p-5 mt-6">
+      <h2 class="font-bold mb-3 flex items-center gap-2" style="color:var(--text)"><i data-lucide="wrench" class="w-4 h-4" aria-hidden="true"></i> รายการซ่อมที่ยังไม่เสร็จ</h2>
       ${
         openRepairs.length === 0
           ? emptyState('ไม่มีรายการซ่อมค้างอยู่ตอนนี้')
           : `<div class="overflow-x-auto"><table class="w-full text-sm">
-              <thead><tr class="text-left" style="color:var(--text-secondary)">
+              <thead><tr class="text-left" style="color:var(--text-2)">
                 <th class="py-2 pr-4">อุปกรณ์</th><th class="py-2 pr-4">วันที่แจ้ง</th><th class="py-2 pr-4">อาการ</th><th class="py-2">สถานะ</th>
               </tr></thead>
               <tbody>
                 ${openRepairs
                   .map(
-                    (r) => `<tr class="border-t border-black/5 dark:border-white/5">
+                    (r) => `<tr class="border-t border-[var(--border)]">
                       <td class="py-2 pr-4">${targetLabel(r.targetType, r.targetId)}</td>
                       <td class="py-2 pr-4">${r.reportedDate}</td>
                       <td class="py-2 pr-4">${r.symptom || '-'}</td>
@@ -247,31 +255,31 @@ function targetLabel(targetType, targetId) {
 }
 
 function emptyState(text) {
-  return `<p class="text-sm py-6 text-center" style="color:var(--text-tertiary)">${text}</p>`;
+  return `<p class="text-sm py-6 text-center" style="color:var(--text-3)">${text}</p>`;
 }
 
 // -------------------------------------------------------------- radios ---
 
 function renderRadios() {
   return `
-    <div class="tactile p-5">
+    <div class="card p-5">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold" style="color:var(--text-primary)">รายการวิทยุ (${state.radios.length})</h2>
-        <button id="btn-add-radio" class="tactile-btn px-3 py-2 text-sm font-semibold flex items-center gap-2" style="color:var(--text-primary)">
-          <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มวิทยุ
+        <h2 class="font-bold" style="color:var(--text)">รายการวิทยุ (${state.radios.length})</h2>
+        <button id="btn-add-radio" class="btn px-4 text-sm">
+          <i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i> เพิ่มวิทยุ
         </button>
       </div>
       <form id="form-add-radio" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-        <input name="serieNo" required placeholder="Serie No." class="tactile-inset px-3 py-2 text-sm" />
-        <input name="position" required placeholder="Position (เช่น CTA1 F/M)" class="tactile-inset px-3 py-2 text-sm" />
-        <input name="remark" placeholder="Remark" class="tactile-inset px-3 py-2 text-sm" />
-        <button class="tactile-btn px-3 py-2 text-sm font-semibold" style="color:var(--text-primary)">บันทึก</button>
+        <input name="serieNo" required placeholder="Serie No." class="input px-3 py-2 text-sm" />
+        <input name="position" required placeholder="Position (เช่น CTA1 F/M)" class="input px-3 py-2 text-sm" />
+        <input name="remark" placeholder="Remark" class="input px-3 py-2 text-sm" />
+        <button class="btn btn-primary px-4 text-sm">บันทึก</button>
       </form>
       ${
         state.radios.length === 0
           ? emptyState('ยังไม่มีรายการวิทยุ กด "เพิ่มวิทยุ" เพื่อเริ่มต้น')
           : `<div class="overflow-x-auto"><table class="w-full text-sm">
-              <thead><tr class="text-left" style="color:var(--text-secondary)">
+              <thead><tr class="text-left" style="color:var(--text-2)">
                 <th class="py-2 pr-4">Serie No.</th><th class="py-2 pr-4">Position</th><th class="py-2 pr-4">Section</th>
                 <th class="py-2 pr-4">สถานะล่าสุด</th><th class="py-2 pr-4">Remark</th><th class="py-2"></th>
               </tr></thead>
@@ -279,13 +287,13 @@ function renderRadios() {
                 ${state.radios
                   .map((r) => {
                     const status = getLatestStatus(state.inspections, TARGET_TYPE.RADIO, r.id);
-                    return `<tr class="border-t border-black/5 dark:border-white/5">
-                      <td class="py-2 pr-4 font-mono">${r.serieNo}</td>
+                    return `<tr class="border-t border-[var(--border)]">
+                      <td class="py-2 pr-4" style="color:var(--accent-2)">${r.serieNo}</td>
                       <td class="py-2 pr-4">${r.position}</td>
                       <td class="py-2 pr-4">${r.section}</td>
                       <td class="py-2 pr-4">${statusBadge(status)}</td>
-                      <td class="py-2 pr-4" style="color:var(--text-secondary)">${r.remark || '-'}</td>
-                      <td class="py-2"><button data-del-radio="${r.id}" class="text-red-500 hover:text-red-600" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                      <td class="py-2 pr-4" style="color:var(--text-2)">${r.remark || '-'}</td>
+                      <td class="py-2"><button data-del-radio="${r.id}" class="icon-btn icon-btn-danger" aria-label="ลบวิทยุ ${r.serieNo}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button></td>
                     </tr>`;
                   })
                   .join('')}
@@ -303,24 +311,24 @@ function renderAccessories() {
     .map((r) => `<option value="${r.id}">${r.position} (${r.serieNo})</option>`)
     .join('');
   return `
-    <div class="tactile p-5">
+    <div class="card p-5">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold" style="color:var(--text-primary)">อุปกรณ์เสริม (${state.accessories.length})</h2>
-        <button id="btn-add-accessory" class="tactile-btn px-3 py-2 text-sm font-semibold flex items-center gap-2" style="color:var(--text-primary)">
-          <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มอุปกรณ์เสริม
+        <h2 class="font-bold" style="color:var(--text)">อุปกรณ์เสริม (${state.accessories.length})</h2>
+        <button id="btn-add-accessory" class="btn px-4 text-sm">
+          <i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i> เพิ่มอุปกรณ์เสริม
         </button>
       </div>
       <form id="form-add-accessory" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-        <select name="radioId" required class="tactile-inset px-3 py-2 text-sm"><option value="">-- เลือกวิทยุ --</option>${radioOptions}</select>
-        <input name="details" required placeholder="รายละเอียด เช่น แท่นชาร์จ+แบตเตอรี่" class="tactile-inset px-3 py-2 text-sm sm:col-span-2" />
-        <input name="remark" placeholder="Remark" class="tactile-inset px-3 py-2 text-sm" />
-        <button class="tactile-btn px-3 py-2 text-sm font-semibold sm:col-span-4" style="color:var(--text-primary)">บันทึก</button>
+        <select name="radioId" required class="input px-3 py-2 text-sm"><option value="">-- เลือกวิทยุ --</option>${radioOptions}</select>
+        <input name="details" required placeholder="รายละเอียด เช่น แท่นชาร์จ+แบตเตอรี่" class="input px-3 py-2 text-sm sm:col-span-2" />
+        <input name="remark" placeholder="Remark" class="input px-3 py-2 text-sm" />
+        <button class="btn btn-primary px-4 text-sm sm:col-span-4">บันทึก</button>
       </form>
       ${
         state.accessories.length === 0
           ? emptyState('ยังไม่มีอุปกรณ์เสริม')
           : `<div class="overflow-x-auto"><table class="w-full text-sm">
-              <thead><tr class="text-left" style="color:var(--text-secondary)">
+              <thead><tr class="text-left" style="color:var(--text-2)">
                 <th class="py-2 pr-4">อุปกรณ์เสริม</th><th class="py-2 pr-4">วิทยุที่ผูกด้วย</th><th class="py-2 pr-4">สถานะล่าสุด</th><th class="py-2 pr-4">Remark</th><th class="py-2"></th>
               </tr></thead>
               <tbody>
@@ -328,12 +336,12 @@ function renderAccessories() {
                   .map((a) => {
                     const radio = state.radios.find((r) => r.id === a.radioId);
                     const status = getLatestStatus(state.inspections, TARGET_TYPE.ACCESSORY, a.id);
-                    return `<tr class="border-t border-black/5 dark:border-white/5">
+                    return `<tr class="border-t border-[var(--border)]">
                       <td class="py-2 pr-4">${a.details}</td>
                       <td class="py-2 pr-4">${radio ? `${radio.position} (${radio.serieNo})` : '-'}</td>
                       <td class="py-2 pr-4">${statusBadge(status)}</td>
-                      <td class="py-2 pr-4" style="color:var(--text-secondary)">${a.remark || '-'}</td>
-                      <td class="py-2"><button data-del-accessory="${a.id}" class="text-red-500 hover:text-red-600" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                      <td class="py-2 pr-4" style="color:var(--text-2)">${a.remark || '-'}</td>
+                      <td class="py-2"><button data-del-accessory="${a.id}" class="icon-btn icon-btn-danger" aria-label="ลบอุปกรณ์เสริม ${a.details}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button></td>
                     </tr>`;
                   })
                   .join('')}
@@ -351,17 +359,17 @@ function inspectionRow(targetType, targetId, label) {
     (i) => i.targetType === targetType && i.targetId === targetId && i.yearMonth === activeMonth
   );
   return `
-    <tr class="border-t border-black/5 dark:border-white/5" data-insp-row data-target-type="${targetType}" data-target-id="${targetId}">
+    <tr class="border-t border-[var(--border)]" data-insp-row data-target-type="${targetType}" data-target-id="${targetId}">
       <td class="py-2 pr-4">${label}</td>
       <td class="py-2 pr-4">
-        <select class="tactile-inset px-2 py-1 text-sm" data-insp-status>
+        <select class="input px-2 py-1 text-sm" data-insp-status>
           <option value="" ${!existing ? 'selected' : ''}>ยังไม่ตรวจ</option>
           <option value="${INSPECTION_STATUS.NORMAL}" ${existing?.status === INSPECTION_STATUS.NORMAL ? 'selected' : ''}>Normal</option>
           <option value="${INSPECTION_STATUS.ABNORMAL}" ${existing?.status === INSPECTION_STATUS.ABNORMAL ? 'selected' : ''}>Abnormal</option>
         </select>
       </td>
       <td class="py-2 pr-4">
-        <input class="tactile-inset px-2 py-1 text-sm w-full" data-insp-remark placeholder="Remark" value="${existing?.remark || ''}" />
+        <input class="input px-2 py-1 text-sm w-full" data-insp-remark placeholder="Remark" value="${existing?.remark || ''}" />
       </td>
     </tr>
   `;
@@ -369,26 +377,26 @@ function inspectionRow(targetType, targetId, label) {
 
 function renderInspection() {
   return `
-    <div class="tactile p-5">
+    <div class="card p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 class="font-bold" style="color:var(--text-primary)">ตรวจสภาพประจำเดือน</h2>
+        <h2 class="font-bold" style="color:var(--text)">ตรวจสภาพประจำเดือน</h2>
         <div class="flex items-center gap-2">
-          <input id="input-month" type="month" value="${activeMonth}" class="tactile-inset px-3 py-2 text-sm" />
-          <button id="btn-save-inspection" class="tactile-btn px-3 py-2 text-sm font-semibold flex items-center gap-2" style="color:var(--text-primary)">
-            <i data-lucide="save" class="w-4 h-4"></i> บันทึกผลตรวจเดือนนี้
+          <input id="input-month" type="month" value="${activeMonth}" class="input px-3 py-2 text-sm" />
+          <button id="btn-save-inspection" class="btn btn-primary px-4 text-sm">
+            <i data-lucide="save" class="w-4 h-4" aria-hidden="true"></i> บันทึกผลตรวจเดือนนี้
           </button>
         </div>
       </div>
-      <h3 class="text-sm font-bold mb-2" style="color:var(--text-secondary)">วิทยุ</h3>
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text-2)">วิทยุ</h3>
       <div class="overflow-x-auto mb-6"><table class="w-full text-sm">
-        <thead><tr class="text-left" style="color:var(--text-secondary)"><th class="py-2 pr-4">Position / Serie No.</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
+        <thead><tr class="text-left" style="color:var(--text-2)"><th class="py-2 pr-4">Position / Serie No.</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
         <tbody>
           ${state.radios.map((r) => inspectionRow(TARGET_TYPE.RADIO, r.id, `${r.position} (${r.serieNo})`)).join('') || `<tr><td colspan="3">${emptyState('ยังไม่มีวิทยุในระบบ')}</td></tr>`}
         </tbody>
       </table></div>
-      <h3 class="text-sm font-bold mb-2" style="color:var(--text-secondary)">อุปกรณ์เสริม</h3>
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text-2)">อุปกรณ์เสริม</h3>
       <div class="overflow-x-auto"><table class="w-full text-sm">
-        <thead><tr class="text-left" style="color:var(--text-secondary)"><th class="py-2 pr-4">รายละเอียด</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
+        <thead><tr class="text-left" style="color:var(--text-2)"><th class="py-2 pr-4">รายละเอียด</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
         <tbody>
           ${state.accessories.map((a) => inspectionRow(TARGET_TYPE.ACCESSORY, a.id, a.details)).join('') || `<tr><td colspan="3">${emptyState('ยังไม่มีอุปกรณ์เสริมในระบบ')}</td></tr>`}
         </tbody>
@@ -402,32 +410,32 @@ function renderInspection() {
 function renderRepairs() {
   const rows = [...state.repairs].sort((a, b) => (a.reportedDate < b.reportedDate ? 1 : -1));
   return `
-    <div class="tactile p-5">
-      <h2 class="font-bold mb-4" style="color:var(--text-primary)">ประวัติการซ่อมแซม (${rows.length})</h2>
+    <div class="card p-5">
+      <h2 class="font-bold mb-4" style="color:var(--text)">ประวัติการซ่อมแซม (${rows.length})</h2>
       ${
         rows.length === 0
           ? emptyState('ยังไม่มีประวัติการซ่อม — จะสร้างอัตโนมัติเมื่อตรวจสภาพเจอ Abnormal')
           : `<div class="overflow-x-auto"><table class="w-full text-sm">
-              <thead><tr class="text-left" style="color:var(--text-secondary)">
+              <thead><tr class="text-left" style="color:var(--text-2)">
                 <th class="py-2 pr-4">อุปกรณ์</th><th class="py-2 pr-4">วันที่แจ้งซ่อม</th><th class="py-2 pr-4">อาการ</th>
                 <th class="py-2 pr-4">สถานะ</th><th class="py-2 pr-4">วันที่เสร็จ</th><th class="py-2">ผลการซ่อม</th>
               </tr></thead>
               <tbody>
                 ${rows
                   .map(
-                    (r) => `<tr class="border-t border-black/5 dark:border-white/5" data-repair-row="${r.id}">
+                    (r) => `<tr class="border-t border-[var(--border)]" data-repair-row="${r.id}">
                       <td class="py-2 pr-4">${targetLabel(r.targetType, r.targetId)}</td>
                       <td class="py-2 pr-4">${r.reportedDate}</td>
                       <td class="py-2 pr-4">${r.symptom || '-'}</td>
                       <td class="py-2 pr-4">
-                        <select class="tactile-inset px-2 py-1 text-sm" data-repair-status>
+                        <select class="input px-2 py-1 text-sm" data-repair-status>
                           ${Object.values(REPAIR_STATUS)
                             .map((s) => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`)
                             .join('')}
                         </select>
                       </td>
-                      <td class="py-2 pr-4"><input type="date" class="tactile-inset px-2 py-1 text-sm" data-repair-completed value="${r.completedDate || ''}" /></td>
-                      <td class="py-2"><input class="tactile-inset px-2 py-1 text-sm w-full" data-repair-result placeholder="ผลการซ่อม" value="${r.result || ''}" /></td>
+                      <td class="py-2 pr-4"><input type="date" class="input px-2 py-1 text-sm" data-repair-completed value="${r.completedDate || ''}" /></td>
+                      <td class="py-2"><input class="input px-2 py-1 text-sm w-full" data-repair-result placeholder="ผลการซ่อม" value="${r.result || ''}" /></td>
                     </tr>`
                   )
                   .join('')}
@@ -449,12 +457,16 @@ function attachGlobalHandlers() {
   );
 
   document.getElementById('btn-theme')?.addEventListener('click', () => {
-    document.documentElement.classList.toggle('dark');
+    const root = document.documentElement;
+    const isDark = !root.classList.contains('dark');
+    root.classList.toggle('dark', isDark);
+    root.setAttribute('data-theme', isDark ? 'dark' : 'light');
     try {
-      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
     } catch {
       /* private mode ไม่มี localStorage ก็ไม่เป็นไร แค่ไม่จำค่าธีมข้ามเซสชัน */
     }
+    render();
   });
 
   document.getElementById('btn-export')?.addEventListener('click', () => {
@@ -611,11 +623,18 @@ function attachRepairsHandlers() {
 export const UIRenderer = {
   async init() {
     try {
-      if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else if (saved === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+      // ไม่มีค่าเก็บไว้ (saved เป็น null) → ไม่ stamp data-theme ปล่อยให้ prefers-color-scheme ทำงานเอง
     } catch {
-      /* ไม่มี localStorage ก็ใช้ light mode เป็นค่าเริ่มต้น */
+      /* ไม่มี localStorage ก็ใช้ system preference ผ่าน prefers-color-scheme แทน */
     }
-    await Promise.all([loadAll(), loadBadge()]);
+    await Promise.all([loadAll(), loadBrandDockAssets()]);
     render();
   }
 };

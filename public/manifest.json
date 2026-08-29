@@ -4,8 +4,8 @@
   "description": "รายการวิทยุสื่อสาร ตรวจสภาพประจำเดือน และประวัติการซ่อมแซม แผนกผลิต 1 (PE1)",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#131b2c",
-  "theme_color": "#131b2c",
+  "background_color": "#F7F9FC",
+  "theme_color": "#F7F9FC",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

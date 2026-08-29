@@ -30,3 +30,24 @@ export const REPAIR_STATUS = {
 
 // สถานะที่ถือว่า "ยังเปิดอยู่" — ใช้กันสร้างรายการซ่อมซ้ำสำหรับ target เดียวกัน
 export const OPEN_REPAIR_STATUSES = [REPAIR_STATUS.PENDING, REPAIR_STATUS.IN_PROGRESS];
+
+// สี badge อ้างอิง CSS variable ของ design token (ok/warn/crit/accent = ความหมายสถานะ ตาม design-system.md ST-4)
+export const BADGE_TONE_CLASSES = {
+  ok: 'bg-[var(--ok-soft)] text-[var(--ok)]',
+  warn: 'bg-[var(--warn-soft)] text-[var(--warn)]',
+  crit: 'bg-[var(--crit-soft)] text-[var(--crit)]',
+  accent: 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)]',
+  muted: 'bg-[var(--surface-2)] text-[var(--text-3)]'
+};
+
+export const INSPECTION_STATUS_TONE = {
+  [INSPECTION_STATUS.NORMAL]: 'ok',
+  [INSPECTION_STATUS.ABNORMAL]: 'crit'
+};
+
+export const REPAIR_STATUS_TONE = {
+  [REPAIR_STATUS.PENDING]: 'warn',
+  [REPAIR_STATUS.IN_PROGRESS]: 'accent',
+  [REPAIR_STATUS.DONE]: 'ok',
+  [REPAIR_STATUS.DISPOSED]: 'muted'
+};

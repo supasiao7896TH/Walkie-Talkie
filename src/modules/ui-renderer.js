@@ -24,6 +24,8 @@ import { exportWorkbook, importWorkbookFile } from './excel-io.js';
 let state = { radios: [], accessories: [], inspections: [], repairs: [] };
 let activeTab = 'dashboard';
 let activeMonth = new Date().toISOString().slice(0, 7);
+let editingRadioId = null;
+let editingAccessoryId = null;
 let brandDockLightSvg = '';
 let brandDockDarkSvg = '';
 
@@ -297,7 +299,12 @@ function renderRadios() {
                       <td class="py-2 pr-4">${r.section}</td>
                       <td class="py-2 pr-4">${statusBadge(status)}</td>
                       <td class="py-2 pr-4" style="color:var(--text-2)">${r.remark || '-'}</td>
-                      <td class="py-2"><button data-del-radio="${r.id}" class="icon-btn icon-btn-danger" aria-label="ลบวิทยุ ${r.serieNo}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button></td>
+                      <td class="py-2">
+                        <div class="flex items-center gap-1">
+                          <button data-edit-radio="${r.id}" class="icon-btn" aria-label="แก้ไขวิทยุ ${r.serieNo}" title="แก้ไข"><i data-lucide="pencil" class="w-4 h-4" aria-hidden="true"></i></button>
+                          <button data-del-radio="${r.id}" class="icon-btn icon-btn-danger" aria-label="ลบวิทยุ ${r.serieNo}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button>
+                        </div>
+                      </td>
                     </tr>`;
                   })
                   .join('')}
@@ -345,7 +352,12 @@ function renderAccessories() {
                       <td class="py-2 pr-4">${radio ? `${radio.position} (${radio.serieNo})` : '-'}</td>
                       <td class="py-2 pr-4">${statusBadge(status)}</td>
                       <td class="py-2 pr-4" style="color:var(--text-2)">${a.remark || '-'}</td>
-                      <td class="py-2"><button data-del-accessory="${a.id}" class="icon-btn icon-btn-danger" aria-label="ลบอุปกรณ์เสริม ${a.details}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button></td>
+                      <td class="py-2">
+                        <div class="flex items-center gap-1">
+                          <button data-edit-accessory="${a.id}" class="icon-btn" aria-label="แก้ไขอุปกรณ์เสริม ${a.details}" title="แก้ไข"><i data-lucide="pencil" class="w-4 h-4" aria-hidden="true"></i></button>
+                          <button data-del-accessory="${a.id}" class="icon-btn icon-btn-danger" aria-label="ลบอุปกรณ์เสริม ${a.details}" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i></button>
+                        </div>
+                      </td>
                     </tr>`;
                   })
                   .join('')}
@@ -622,18 +634,54 @@ function attachGlobalHandlers() {
 
 function attachRadiosHandlers() {
   const form = document.getElementById('form-add-radio');
-  document.getElementById('btn-add-radio')?.addEventListener('click', () => form.classList.toggle('hidden'));
+  const submitBtn = form.querySelector('button');
+
+  document.getElementById('btn-add-radio')?.addEventListener('click', () => {
+    const wasHidden = form.classList.contains('hidden');
+    form.classList.toggle('hidden');
+    if (wasHidden) {
+      editingRadioId = null;
+      form.reset();
+      submitBtn.textContent = 'บันทึก';
+    }
+  });
+
+  document.querySelectorAll('[data-edit-radio]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const r = state.radios.find((x) => x.id === btn.dataset.editRadio);
+      if (!r) return;
+      editingRadioId = r.id;
+      form.classList.remove('hidden');
+      form.querySelector('[name=serieNo]').value = r.serieNo;
+      form.querySelector('[name=position]').value = r.position;
+      form.querySelector('[name=remark]').value = r.remark || '';
+      submitBtn.textContent = 'บันทึกการแก้ไข';
+      form.querySelector('[name=serieNo]').focus();
+    })
+  );
+
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    await StorageEngine.radios.put({
-      id: crypto.randomUUID(),
-      serieNo: fd.get('serieNo').trim(),
-      position: fd.get('position').trim(),
-      section: SECTION,
-      remark: fd.get('remark').trim(),
-      order: Date.now()
-    });
+    if (editingRadioId) {
+      const existing = state.radios.find((r) => r.id === editingRadioId);
+      await StorageEngine.radios.put({
+        ...existing,
+        serieNo: fd.get('serieNo').trim(),
+        position: fd.get('position').trim(),
+        remark: fd.get('remark').trim()
+      });
+      editingRadioId = null;
+    } else {
+      await StorageEngine.radios.put({
+        id: crypto.randomUUID(),
+        serieNo: fd.get('serieNo').trim(),
+        position: fd.get('position').trim(),
+        section: SECTION,
+        remark: fd.get('remark').trim(),
+        order: Date.now()
+      });
+    }
     await loadAll();
     render();
   });
@@ -649,17 +697,53 @@ function attachRadiosHandlers() {
 
 function attachAccessoriesHandlers() {
   const form = document.getElementById('form-add-accessory');
-  document.getElementById('btn-add-accessory')?.addEventListener('click', () => form.classList.toggle('hidden'));
+  const submitBtn = form.querySelector('button');
+
+  document.getElementById('btn-add-accessory')?.addEventListener('click', () => {
+    const wasHidden = form.classList.contains('hidden');
+    form.classList.toggle('hidden');
+    if (wasHidden) {
+      editingAccessoryId = null;
+      form.reset();
+      submitBtn.textContent = 'บันทึก';
+    }
+  });
+
+  document.querySelectorAll('[data-edit-accessory]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const a = state.accessories.find((x) => x.id === btn.dataset.editAccessory);
+      if (!a) return;
+      editingAccessoryId = a.id;
+      form.classList.remove('hidden');
+      form.querySelector('[name=radioId]').value = a.radioId;
+      form.querySelector('[name=details]').value = a.details;
+      form.querySelector('[name=remark]').value = a.remark || '';
+      submitBtn.textContent = 'บันทึกการแก้ไข';
+      form.querySelector('[name=details]').focus();
+    })
+  );
+
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    await StorageEngine.accessories.put({
-      id: crypto.randomUUID(),
-      radioId: fd.get('radioId'),
-      details: fd.get('details').trim(),
-      remark: fd.get('remark').trim(),
-      order: Date.now()
-    });
+    if (editingAccessoryId) {
+      const existing = state.accessories.find((a) => a.id === editingAccessoryId);
+      await StorageEngine.accessories.put({
+        ...existing,
+        radioId: fd.get('radioId'),
+        details: fd.get('details').trim(),
+        remark: fd.get('remark').trim()
+      });
+      editingAccessoryId = null;
+    } else {
+      await StorageEngine.accessories.put({
+        id: crypto.randomUUID(),
+        radioId: fd.get('radioId'),
+        details: fd.get('details').trim(),
+        remark: fd.get('remark').trim(),
+        order: Date.now()
+      });
+    }
     await loadAll();
     render();
   });

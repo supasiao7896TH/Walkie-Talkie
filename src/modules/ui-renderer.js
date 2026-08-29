@@ -358,13 +358,14 @@ function renderAccessories() {
 
 // ----------------------------------------------------------- inspection --
 
-function inspectionRow(targetType, targetId, label) {
+function inspectionRow(targetType, targetId, labelCells) {
   const existing = state.inspections.find(
     (i) => i.targetType === targetType && i.targetId === targetId && i.yearMonth === activeMonth
   );
+  const leadingCells = labelCells.map((cell) => `<td class="py-2 pr-4">${cell}</td>`).join('');
   return `
     <tr class="border-t border-[var(--border)]" data-insp-row data-target-type="${targetType}" data-target-id="${targetId}">
-      <td class="py-2 pr-4">${label}</td>
+      ${leadingCells}
       <td class="py-2 pr-4">
         <select class="input px-2 py-1 text-sm w-full" data-insp-status>
           <option value="" ${!existing ? 'selected' : ''}>ยังไม่ตรวจ</option>
@@ -379,9 +380,10 @@ function inspectionRow(targetType, targetId, label) {
   `;
 }
 
-// colgroup เดียวกันบังคับใช้กับทั้ง 2 ตาราง ไม่งั้นแต่ละตารางจะคำนวณความกว้างคอลัมน์เองตามเนื้อหา
-// ของตัวเอง (label วิทยุกับอุปกรณ์เสริมยาวไม่เท่ากัน) ทำให้คอลัมน์ "สถานะ" เหลื่อมกันระหว่าง 2 ตาราง
-const INSPECTION_COLGROUP = `<colgroup><col style="width:50%" /><col style="width:20%" /><col style="width:30%" /></colgroup>`;
+// เลขคอลัมน์ต่างกันระหว่าง 2 ตาราง (วิทยุแยก Position/Serie No. เป็น 2 คอลัมน์ อุปกรณ์เสริมมีแค่ 1)
+// แต่ผลรวม % ของคอลัมน์ label ก่อนถึง "สถานะ" เท่ากันทั้งคู่ (50%) คอลัมน์สถานะจึงยังตรงกันระหว่าง 2 ตาราง
+const RADIO_INSPECTION_COLGROUP = `<colgroup><col style="width:30%" /><col style="width:20%" /><col style="width:20%" /><col style="width:30%" /></colgroup>`;
+const ACCESSORY_INSPECTION_COLGROUP = `<colgroup><col style="width:50%" /><col style="width:20%" /><col style="width:30%" /></colgroup>`;
 
 function renderInspection() {
   return `
@@ -397,18 +399,18 @@ function renderInspection() {
       </div>
       <h3 class="text-sm font-bold mb-2" style="color:var(--text-2)">วิทยุ</h3>
       <div class="overflow-x-auto mb-6"><table class="w-full text-sm" style="table-layout:fixed">
-        ${INSPECTION_COLGROUP}
-        <thead><tr class="text-left" style="color:var(--text-2)"><th class="py-2 pr-4">Position / Serie No.</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
+        ${RADIO_INSPECTION_COLGROUP}
+        <thead><tr class="text-left" style="color:var(--text-2)"><th class="py-2 pr-4">Position</th><th class="py-2 pr-4">Serie No.</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
         <tbody>
-          ${state.radios.map((r) => inspectionRow(TARGET_TYPE.RADIO, r.id, `${r.position} (${r.serieNo})`)).join('') || `<tr><td colspan="3">${emptyState('ยังไม่มีวิทยุในระบบ')}</td></tr>`}
+          ${state.radios.map((r) => inspectionRow(TARGET_TYPE.RADIO, r.id, [r.position, `<span style="color:var(--accent-2)">${r.serieNo}</span>`])).join('') || `<tr><td colspan="4">${emptyState('ยังไม่มีวิทยุในระบบ')}</td></tr>`}
         </tbody>
       </table></div>
       <h3 class="text-sm font-bold mb-2" style="color:var(--text-2)">อุปกรณ์เสริม</h3>
       <div class="overflow-x-auto"><table class="w-full text-sm" style="table-layout:fixed">
-        ${INSPECTION_COLGROUP}
+        ${ACCESSORY_INSPECTION_COLGROUP}
         <thead><tr class="text-left" style="color:var(--text-2)"><th class="py-2 pr-4">รายละเอียด</th><th class="py-2 pr-4">สถานะ</th><th class="py-2">Remark</th></tr></thead>
         <tbody>
-          ${state.accessories.map((a) => inspectionRow(TARGET_TYPE.ACCESSORY, a.id, a.details)).join('') || `<tr><td colspan="3">${emptyState('ยังไม่มีอุปกรณ์เสริมในระบบ')}</td></tr>`}
+          ${state.accessories.map((a) => inspectionRow(TARGET_TYPE.ACCESSORY, a.id, [a.details])).join('') || `<tr><td colspan="3">${emptyState('ยังไม่มีอุปกรณ์เสริมในระบบ')}</td></tr>`}
         </tbody>
       </table></div>
     </div>

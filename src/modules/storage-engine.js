@@ -109,5 +109,19 @@ export const StorageEngine = {
       this.inspections.bulkPut(inspections),
       this.repairs.bulkPut(repairs)
     ]);
+  },
+
+  async seedIfEmpty({ defaultRadios = [], defaultAccessories = [] } = {}) {
+    const existingRadios = await this.radios.getAll();
+    if (existingRadios.length === 0 && defaultRadios.length > 0) {
+      await this.radios.bulkPut(defaultRadios);
+      const existingAcc = await this.accessories.getAll();
+      if (existingAcc.length === 0 && defaultAccessories.length > 0) {
+        await this.accessories.bulkPut(defaultAccessories);
+      }
+      return true;
+    }
+    return false;
   }
 };
+

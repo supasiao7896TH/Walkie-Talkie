@@ -18,8 +18,19 @@ import {
   REPAIR_STATUS_TONE
 } from './app-config.js';
 import { exportWorkbook, importWorkbookFile } from './excel-io.js';
+import { DEFAULT_RADIOS, DEFAULT_ACCESSORIES } from '../data/seed-data.js';
 
 /* global lucide, html2canvas */
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 let state = { radios: [], accessories: [], inspections: [], repairs: [] };
 let activeTab = 'dashboard';
@@ -74,10 +85,12 @@ function sortByOrder(list) {
 }
 
 async function loadAll() {
+  await StorageEngine.seedIfEmpty({ defaultRadios: DEFAULT_RADIOS, defaultAccessories: DEFAULT_ACCESSORIES });
   state = await StorageEngine.loadAll();
   state.radios = sortByOrder(state.radios);
   state.accessories = sortByOrder(state.accessories);
 }
+
 
 function badge(tone, label) {
   return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${BADGE_TONE_CLASSES[tone] || BADGE_TONE_CLASSES.muted}">${label}</span>`;

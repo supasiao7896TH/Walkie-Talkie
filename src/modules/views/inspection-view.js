@@ -108,8 +108,12 @@ export function attachInspectionHandlers({ state, getActiveMonth, setActiveMonth
       }
     }
 
-    for (const r of newInspections) await StorageEngine.inspections.put(r);
-    for (const r of newRepairs) await StorageEngine.repairs.put(r);
+    if (newInspections.length > 0) {
+      await StorageEngine.inspections.bulkPut(newInspections);
+    }
+    if (newRepairs.length > 0) {
+      await StorageEngine.repairs.bulkPut(newRepairs);
+    }
 
     await loadAll();
     render();

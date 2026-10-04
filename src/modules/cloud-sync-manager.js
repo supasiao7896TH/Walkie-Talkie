@@ -28,6 +28,15 @@ function setSyncStatus(status) {
   _statusListeners.forEach((fn) => fn(status));
 }
 
+// Debounce helper ป้องกันการ re-render หน้าจอถี่เกินไปเวลามีหลาย snapshot รัวๆ
+function debounce(fn, waitMs = 150) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), waitMs);
+  };
+}
+
 export const CloudSyncManager = {
   getStatus() {
     return _syncStatus;
@@ -44,6 +53,12 @@ export const CloudSyncManager = {
   async initRealtimeSync({ onDataUpdated } = {}) {
     setSyncStatus('connecting');
 
+    const debouncedOnDataUpdated = debounce((storeName) => {
+      if (typeof onDataUpdated === 'function') {
+        onDataUpdated(storeName);
+      }
+    }, 150);
+
     try {
       const stores = [STORES.RADIOS, STORES.ACCESSORIES, STORES.INSPECTIONS, STORES.REPAIRS];
 
@@ -52,6 +67,7 @@ export const CloudSyncManager = {
 
         const unsub = onSnapshot(
           colRef,
+          { includeMetadataChanges: true },
           async (snapshot) => {
             setSyncStatus('online');
 
@@ -67,26 +83,38 @@ export const CloudSyncManager = {
               return;
             }
 
-            if (snapshot.empty && storeName === STORES.ACCESSORIES) {
+            if (snapshot.empty) {
               return;
             }
 
-            // แปลง Firestore documents เป็น array
-            const remoteDocs = snapshot.docs.map((d) => d.data());
+            // ใช้ docChanges() แบบ Delta Update แทนการ clear() ทั้งตาราง
+            const changes = snapshot.docChanges();
+            let hasExternalChange = false;
 
-            // บันทึกเฉพาะเมื่อไม่ใช่ local write ที่เพิ่งยิงไป
             _isApplyingRemote = true;
             try {
-              await StorageEngine[storeName].clear();
-              if (remoteDocs.length > 0) {
-                await StorageEngine[storeName].bulkPut(remoteDocs);
+              for (const change of changes) {
+                // ถ้า change นี้มาจาก local write ในเครื่องนี้เอง และยัง pending อยู่ ไม่ต้องทับ IndexedDB
+                if (change.doc.metadata.hasPendingWrites) {
+                  continue;
+                }
+
+                hasExternalChange = true;
+                const data = change.doc.data();
+
+                if (change.type === 'added' || change.type === 'modified') {
+                  await StorageEngine[storeName].put(data);
+                } else if (change.type === 'removed') {
+                  await StorageEngine[storeName].remove(change.doc.id);
+                }
               }
             } finally {
               _isApplyingRemote = false;
             }
 
-            if (typeof onDataUpdated === 'function') {
-              onDataUpdated(storeName);
+            // สั่ง re-render เฉพาะเมื่อมีข้อมูลจากภายนอกหรือยืนยันจาก server เข้ามาจริงๆ
+            if (hasExternalChange) {
+              debouncedOnDataUpdated(storeName);
             }
           },
           (error) => {

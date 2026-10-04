@@ -54,6 +54,12 @@ async function _tx(storeName, mode, fn) {
   return result;
 }
 
+let _syncHook = null;
+
+export function setSyncHook(hook) {
+  _syncHook = hook;
+}
+
 function makeStore(storeName) {
   return {
     async getAll() {
@@ -64,18 +70,29 @@ function makeStore(storeName) {
     },
     async put(record) {
       await _tx(storeName, 'readwrite', (store) => _promisify(store.put(record)));
+      if (_syncHook?.pushRecord) {
+        _syncHook.pushRecord(storeName, record).catch(() => {});
+      }
       return record;
     },
     async remove(id) {
-      return _tx(storeName, 'readwrite', (store) => _promisify(store.delete(id)));
+      const res = await _tx(storeName, 'readwrite', (store) => _promisify(store.delete(id)));
+      if (_syncHook?.deleteRecord) {
+        _syncHook.deleteRecord(storeName, id).catch(() => {});
+      }
+      return res;
     },
     async clear() {
       return _tx(storeName, 'readwrite', (store) => _promisify(store.clear()));
     },
     async bulkPut(records) {
-      return _tx(storeName, 'readwrite', async (store) => {
+      const res = await _tx(storeName, 'readwrite', async (store) => {
         for (const r of records) store.put(r);
       });
+      if (_syncHook?.bulkPush) {
+        _syncHook.bulkPush(storeName, records).catch(() => {});
+      }
+      return res;
     }
   };
 }

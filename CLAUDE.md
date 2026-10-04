@@ -36,10 +36,13 @@ npm run preview    # เปิด dist/ ที่ build แล้วดูก่
 - `tests/*.test.js` ครอบเฉพาะ pure logic ใน `inspection-logic.js` และ `excel-io.js` เท่านั้น — ไม่มีเทส UI/DOM (`ui-renderer.js` ตั้งใจไม่เทส)
 - แต่ละไฟล์เทสสร้าง fixture ด้วยฟังก์ชัน helper เล็กๆ ในไฟล์ตัวเอง ไม่มี shared fixture file — ดู `tests/inspection-status.test.js` เป็นตัวอย่างแพทเทิร์น
 
-## Storage & scope (v1)
-- Local-only IndexedDB — ไม่มี cloud sync/login/server (ดู `docs/adr/0002-local-only-storage.md`) — ฟีเจอร์ใดที่ปกติต้องมี backend (เช่น ส่งอีเมลอัตโนมัติ) ต้องหาทางออกที่ทำงานฝั่ง client ล้วน (ดู copy-as-image ของหน้ารายงานเป็นตัวอย่างการแก้ปัญหานี้)
-- Backup ผ่าน Export/Import Excel เท่านั้น — เตือนผู้ใช้เป็นระยะให้ export เก็บไว้
-- Section hardcode เป็น "PE1" เดียว ไม่รองรับหลายแผนกใน v1
+## Storage & scope (v1.1)
+- Local-First + Cloud Real-time Sync (Firebase Firestore `walkie-talkie-pe1-gcm`):
+  - ข้อมูลบันทึกลง IndexedDB ในเครื่องทันที (ทำงานออฟไลน์ได้ 100%)
+  - ซิงค์ขึ้น/ลง Real-Time ผ่าน `CloudSyncManager` (Firestore `onSnapshot`)
+  - คอลเลกชัน: `pe1_radios`, `pe1_accessories`, `pe1_inspections`, `pe1_repairs`
+- Backup ผ่าน Export/Import Excel ได้เสมอ
+- Section กำหนดเป็น "PE1"
 
 ## CI/CD
 - `.github/workflows/ci.yml`: job `build-and-test` รันทุก push/PR (npm ci → build → test), job `deploy` รันเฉพาะ push → main และต้องรอ `build-and-test` ผ่านก่อน (`needs:`)

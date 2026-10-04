@@ -1,8 +1,9 @@
-import { StorageEngine } from './storage-engine.js';
+import { StorageEngine, setSyncHook } from './storage-engine.js';
 import { SECTION } from './app-config.js';
 import { exportWorkbook, importWorkbookFile } from './excel-io.js';
 import { DEFAULT_RADIOS, DEFAULT_ACCESSORIES } from '../data/seed-data.js';
 import { icons } from './ui-utils.js';
+import { CloudSyncManager } from './cloud-sync-manager.js';
 
 // Views
 import { renderDashboard } from './views/dashboard-view.js';
@@ -12,6 +13,8 @@ import { renderInspection, attachInspectionHandlers } from './views/inspection-v
 import { renderRepairs, attachRepairsHandlers } from './views/repairs-view.js';
 import { renderReport, attachReportHandlers } from './views/report-view.js';
 
+setSyncHook(CloudSyncManager);
+
 let state = { radios: [], accessories: [], inspections: [], repairs: [] };
 let activeTab = 'dashboard';
 let activeMonth = new Date().toISOString().slice(0, 7);
@@ -19,6 +22,16 @@ let editingRadioId = null;
 let editingAccessoryId = null;
 let brandDockLightSvg = '';
 let brandDockDarkSvg = '';
+
+function syncStatusBadge(status) {
+  if (status === 'online') {
+    return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="เชื่อมต่อ Real-time สำเร็จ"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Cloud Sync</span>`;
+  }
+  if (status === 'connecting') {
+    return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="กำลังเชื่อมต่อ Cloud..."><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Connecting</span>`;
+  }
+  return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20" title="โหมดออฟไลน์ — ข้อมูลปลอดภัยในเครื่อง"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Local-First</span>`;
+}
 
 // ต้อง inline <svg> เข้า DOM ตรงๆ ไม่ใช่ <img src="...svg"> — Chrome ไม่รัน CSS animation
 // ของไฟล์ SVG ที่โหลดผ่าน <img> เลย (ค้างที่ keyframe 0% opacity:0 ของ .tube ตลอดไป)
@@ -51,12 +64,16 @@ async function loadAll() {
 
 function renderHeader() {
   const isDark = document.documentElement.classList.contains('dark');
+  const syncStatus = CloudSyncManager.getStatus();
   return `
     <header class="border-b border-[var(--border)]">
       <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold" style="color:var(--text)">Walkie Talkie Tracker</h1>
-          <p class="text-sm" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl md:text-3xl font-bold" style="color:var(--text)">Walkie Talkie Tracker</h1>
+            ${syncStatusBadge(syncStatus)}
+          </div>
+          <p class="text-sm mt-0.5" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
         </div>
         <div class="flex items-center gap-2">
           <button id="btn-export" class="btn px-4 text-sm">
@@ -240,5 +257,21 @@ export const UIRenderer = {
     }
     await Promise.all([loadAll(), loadBrandDockAssets()]);
     render();
+
+    // เริ่มต้น Real-Time Cloud Sync ในพื้นหลัง
+    CloudSyncManager.onStatusChange(() => {
+      // Re-render header indicator เมื่อสถานะการเชื่อมต่อเปลี่ยน
+      const headerEl = document.querySelector('header');
+      if (headerEl) {
+        render();
+      }
+    });
+
+    CloudSyncManager.initRealtimeSync({
+      onDataUpdated: async () => {
+        await loadAll();
+        render();
+      }
+    });
   }
 };

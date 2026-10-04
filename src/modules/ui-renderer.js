@@ -25,12 +25,12 @@ let brandDockDarkSvg = '';
 
 function syncStatusBadge(status) {
   if (status === 'online') {
-    return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="เชื่อมต่อ Real-time สำเร็จ"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Cloud Sync</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="เชื่อมต่อ Real-time สำเร็จ"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Cloud Sync</span>`;
   }
   if (status === 'connecting') {
-    return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="กำลังเชื่อมต่อ Cloud..."><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Connecting</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="กำลังเชื่อมต่อ Cloud..."><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Connecting</span>`;
   }
-  return `<span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20" title="โหมดออฟไลน์ — ข้อมูลปลอดภัยในเครื่อง"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Local-First</span>`;
+  return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20" title="โหมดออฟไลน์ — ข้อมูลปลอดภัยในเครื่อง"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Local-First</span>`;
 }
 
 // ต้อง inline <svg> เข้า DOM ตรงๆ ไม่ใช่ <img src="...svg"> — Chrome ไม่รัน CSS animation
@@ -67,20 +67,20 @@ function renderHeader() {
   const syncStatus = CloudSyncManager.getStatus();
   return `
     <header class="border-b border-[var(--border)]">
-      <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
-        <div>
-          <div class="flex items-center gap-3">
-            <h1 class="text-2xl md:text-3xl font-bold" style="color:var(--text)">Walkie Talkie Tracker</h1>
+      <div class="max-w-6xl mx-auto px-4 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold truncate" style="color:var(--text)">Walkie Talkie Tracker</h1>
             ${syncStatusBadge(syncStatus)}
           </div>
-          <p class="text-sm mt-0.5" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
+          <p class="text-xs sm:text-sm mt-0.5 truncate" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="btn-export" class="btn px-4 text-sm">
-            <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i> Export
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button id="btn-export" class="btn px-3 sm:px-4 text-xs sm:text-sm">
+            <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i> <span class="hidden sm:inline">Export</span>
           </button>
-          <label class="btn px-4 text-sm cursor-pointer">
-            <i data-lucide="upload" class="w-4 h-4" aria-hidden="true"></i> Import
+          <label class="btn px-3 sm:px-4 text-xs sm:text-sm cursor-pointer">
+            <i data-lucide="upload" class="w-4 h-4" aria-hidden="true"></i> <span class="hidden sm:inline">Import</span>
             <input id="input-import" type="file" accept=".xlsx" class="hidden" />
           </label>
           <button id="btn-theme" class="btn btn-icon" aria-label="สลับโหมดสี" aria-pressed="${isDark}" title="สลับโหมดสี">

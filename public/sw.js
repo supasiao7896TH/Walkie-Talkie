@@ -1,5 +1,5 @@
 // bump CACHE_NAME ทุกครั้งที่แก้ index.html/src/** เพื่อบังคับ client ดึงไฟล์ใหม่
-const CACHE_NAME = 'wt-tracker-v2';
+const CACHE_NAME = 'wt-tracker-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -15,6 +15,9 @@ self.addEventListener('activate', (event) => {
 // network-first: ออนไลน์ได้โค้ดล่าสุดเสมอ, ออฟไลน์ค่อย fallback ไป cache ที่เคยเก็บไว้
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // ห้ามดักจับ request ภายนอก (Firebase, Google Fonts, APIs) ให้ browser วิ่งตรง 100%
+  if (!event.request.url.startsWith(self.location.origin)) return;
 
   event.respondWith(
     fetch(event.request)

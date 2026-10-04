@@ -241,3 +241,18 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* ซ่อน Scrollbar สำหรับแถบแท็บที่เลื่อนได้ด้วยนิ้วบนมือถือ */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area padding สำหรับหัวเว็บเมื่อเปิดแบบ PWA เต็มจอบน iPhone */
+header {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+

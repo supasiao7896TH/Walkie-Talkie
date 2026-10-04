@@ -1,12 +1,65 @@
 {
+  "id": "walkie-talkie-pe1-gcm",
   "name": "Walkie Talkie Tracker — PE1",
-  "short_name": "WT Tracker",
+  "short_name": "WT PE1",
   "description": "รายการวิทยุสื่อสาร ตรวจสภาพประจำเดือน และประวัติการซ่อมแซม แผนกผลิต 1 (PE1)",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#F7F9FC",
-  "theme_color": "#F7F9FC",
+  "theme_color": "#1D4ED8",
+  "categories": ["productivity", "utilities", "business"],
+  "lang": "th",
+  "dir": "ltr",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ตรวจสภาพประจำเดือน",
+      "short_name": "ตรวจสภาพ",
+      "description": "เปิดหน้าบันทึกผลการตรวจสภาพวิทยุประจำเดือน",
+      "url": "/#tab=inspection",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "รายการวิทยุ",
+      "short_name": "วิทยุ",
+      "description": "ดูรายการวิทยุสื่อสารทั้งหมด",
+      "url": "/#tab=radios",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ประวัติการซ่อม",
+      "short_name": "การซ่อม",
+      "description": "ดูและบันทึกประวัติการส่งซ่อมวิทยุ",
+      "url": "/#tab=repairs",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

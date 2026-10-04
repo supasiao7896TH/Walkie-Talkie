@@ -23,6 +23,26 @@ let editingAccessoryId = null;
 let brandDockLightSvg = '';
 let brandDockDarkSvg = '';
 
+let deferredInstallPrompt = null;
+let isPwaInstalled = typeof window !== 'undefined' && (
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true
+);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    render();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    isPwaInstalled = true;
+    render();
+  });
+}
+
 function syncStatusBadge(status) {
   if (status === 'online') {
     return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="เชื่อมต่อ Real-time สำเร็จ"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Cloud Sync</span>`;
@@ -31,6 +51,32 @@ function syncStatusBadge(status) {
     return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="กำลังเชื่อมต่อ Cloud..."><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Connecting</span>`;
   }
   return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20" title="โหมดออฟไลน์ — ข้อมูลปลอดภัยในเครื่อง"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Local-First</span>`;
+}
+
+function renderInstallButton() {
+  if (isPwaInstalled) return '';
+  const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (deferredInstallPrompt) {
+    return `
+      <button id="btn-install-pwa" class="btn btn-primary px-3 sm:px-4 text-xs sm:text-sm shadow-sm animate-pulse" title="ติดตั้งแอปบนมือถือ">
+        <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i>
+        <span>ติดตั้งแอป</span>
+      </button>
+    `;
+  }
+
+  if (isIos) {
+    return `
+      <button id="btn-install-ios" class="btn px-2.5 sm:px-4 text-xs sm:text-sm" title="วิธีติดตั้งบน iOS">
+        <i data-lucide="share" class="w-4 h-4" aria-hidden="true"></i>
+        <span class="hidden sm:inline">เพิ่มลงหน้าจอโฮม</span>
+        <span class="sm:hidden">ติดตั้ง</span>
+      </button>
+    `;
+  }
+
+  return '';
 }
 
 // ต้อง inline <svg> เข้า DOM ตรงๆ ไม่ใช่ <img src="...svg"> — Chrome ไม่รัน CSS animation
@@ -76,10 +122,11 @@ function renderHeader() {
           <p class="text-xs sm:text-sm mt-0.5 truncate" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
         </div>
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button id="btn-export" class="btn px-3 sm:px-4 text-xs sm:text-sm">
+          ${renderInstallButton()}
+          <button id="btn-export" class="btn px-2.5 sm:px-4 text-xs sm:text-sm">
             <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i> <span class="hidden sm:inline">Export</span>
           </button>
-          <label class="btn px-3 sm:px-4 text-xs sm:text-sm cursor-pointer">
+          <label class="btn px-2.5 sm:px-4 text-xs sm:text-sm cursor-pointer">
             <i data-lucide="upload" class="w-4 h-4" aria-hidden="true"></i> <span class="hidden sm:inline">Import</span>
             <input id="input-import" type="file" accept=".xlsx" class="hidden" />
           </label>
@@ -103,10 +150,10 @@ const TABS = [
 
 function renderTabs() {
   return `
-    <nav class="flex flex-wrap gap-2">
+    <nav class="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap sm:flex-wrap">
       ${TABS.map(
         (t) => `
-        <button data-tab="${t.id}" class="tab-btn btn px-4 text-sm ${
+        <button data-tab="${t.id}" class="tab-btn btn px-4 text-sm shrink-0 ${
           activeTab === t.id ? 'tab-active' : ''
         }">
           <i data-lucide="${t.icon}" class="w-4 h-4" aria-hidden="true"></i> ${t.label}
@@ -163,9 +210,28 @@ function attachGlobalHandlers() {
   document.querySelectorAll('.tab-btn').forEach((btn) =>
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab;
+      try {
+        window.location.hash = 'tab=' + activeTab;
+      } catch {}
       render();
     })
   );
+
+  document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        deferredInstallPrompt = null;
+        isPwaInstalled = true;
+        render();
+      }
+    }
+  });
+
+  document.getElementById('btn-install-ios')?.addEventListener('click', () => {
+    alert("วิธีติดตั้งบน iPhone/iPad:\n1. แตะปุ่มแชร์ (Share) ที่แถบด้านล่างของ Safari\n2. เลื่อนลงแล้วแตะ 'เพิ่มไปยังหน้าจอโฮม' (Add to Home Screen)\n3. แตะ 'เพิ่ม' (Add) ที่มุมขวาบนค่ะ");
+  });
 
   document.getElementById('btn-theme')?.addEventListener('click', () => {
     const root = document.documentElement;
@@ -255,6 +321,22 @@ export const UIRenderer = {
     } catch {
       /* ไม่มี localStorage ก็ใช้ system preference */
     }
+    // อ่านแท็บเริ่มต้นจาก URL hash (รองรับ PWA Shortcuts และ Bookmark)
+    if (typeof window !== 'undefined') {
+      const hashMatch = window.location.hash.match(/tab=([a-z]+)/);
+      if (hashMatch && TABS.some((t) => t.id === hashMatch[1])) {
+        activeTab = hashMatch[1];
+      }
+
+      window.addEventListener('hashchange', () => {
+        const m = window.location.hash.match(/tab=([a-z]+)/);
+        if (m && TABS.some((t) => t.id === m[1]) && activeTab !== m[1]) {
+          activeTab = m[1];
+          render();
+        }
+      });
+    }
+
     await Promise.all([loadAll(), loadBrandDockAssets()]);
     render();
 

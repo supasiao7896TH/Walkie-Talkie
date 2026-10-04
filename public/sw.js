@@ -1,5 +1,5 @@
 // bump CACHE_NAME ทุกครั้งที่แก้ index.html/src/** เพื่อบังคับ client ดึงไฟล์ใหม่
-const CACHE_NAME = 'wt-tracker-v3';
+const CACHE_NAME = 'wt-tracker-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

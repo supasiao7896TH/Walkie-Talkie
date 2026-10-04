@@ -198,14 +198,14 @@ body {
   outline-offset: 2px;
 }
 
-/* ST-15: Brand Dock — แถบล่างถาวรเต็มความกว้าง, พื้นกลืนกับธีมแอปเองผ่าน token */
+/* ST-15: Brand Dock — แถบล่างถาวรเต็มความกว้าง, พื้นกลืนกับธีมแอปเองผ่าน token (72px/208px) */
 .brand-dock {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 30;
-  height: calc(100px + env(safe-area-inset-bottom));
+  height: calc(72px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   align-items: center;
@@ -215,7 +215,7 @@ body {
   box-shadow: var(--shadow-1);
 }
 .brand-dock svg {
-  width: 280px;
+  width: 208px;
   height: auto;
   display: block;
 }
@@ -231,7 +231,7 @@ body {
 
 /* เผื่อพื้นที่ให้เนื้อหาไม่โดน brand dock ทับ */
 .dock-space {
-  padding-bottom: calc(100px + env(safe-area-inset-bottom) + 24px);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom) + 24px);
 }
 
 @keyframes fadeIn {

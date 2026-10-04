@@ -86,8 +86,13 @@ export function renderReport(state, activeMonth, SECTION) {
         </div>
       </div>
       <div id="report-capture" style="background:#FFFFFF;border:1px solid #D6DEEE;border-top:4px solid #1D4ED8;border-radius:13px;padding:20px">
-        <p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8A6410;margin:0 0 4px">แผนก ${escapeHtml(SECTION)}</p>
-        <h2 style="font-size:20px;font-weight:700;color:#131829;margin:0 0 12px">รายงานผลตรวจสภาพวิทยุ/อุปกรณ์เสริม — เดือน ${escapeHtml(activeMonth)}</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #EDF1F9">
+          <div>
+            <p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8A6410;margin:0 0 4px">แผนก ${escapeHtml(SECTION)}</p>
+            <h2 style="font-size:20px;font-weight:700;color:#131829;margin:0">รายงานผลตรวจสภาพวิทยุ/อุปกรณ์เสริม — เดือน ${escapeHtml(activeMonth)}</h2>
+          </div>
+          <img src="/brand/gcm-pta-logo.png" alt="GCM PTA Logo" style="height:57px;width:auto;object-fit:contain;flex-shrink:0" crossorigin="anonymous" />
+        </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
           ${reportStat('วิทยุทั้งหมด', state.radios.length, '#1D4ED8')}
           ${reportStat('อุปกรณ์เสริมทั้งหมด', state.accessories.length, '#B2BFD8')}
@@ -108,7 +113,11 @@ export async function copyReportImage() {
     return;
   }
   try {
-    const canvas = await html2canvas(node, { backgroundColor: '#FFFFFF', scale: 2 });
+    const canvas = await html2canvas(node, {
+      backgroundColor: '#FFFFFF',
+      scale: 2,
+      useCORS: true
+    });
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     toast('คัดลอกรูปรายงานแล้ว — ไปวาง (Ctrl+V) ในอีเมลได้เลย');

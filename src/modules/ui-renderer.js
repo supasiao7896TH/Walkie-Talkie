@@ -114,12 +114,17 @@ function renderHeader() {
   return `
     <header class="border-b border-[var(--border)]">
       <div class="max-w-6xl mx-auto px-4 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold truncate" style="color:var(--text)">Walkie Talkie Tracker</h1>
-            ${syncStatusBadge(syncStatus)}
+        <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div class="bg-white p-1.5 rounded-lg border border-[var(--border)] shadow-xs shrink-0 flex items-center justify-center">
+            <img src="/brand/gcm-pta-logo.png" alt="GCM PTA Logo" class="h-[47px] sm:h-[57px] w-auto object-contain" />
           </div>
-          <p class="text-xs sm:text-sm mt-0.5 truncate" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <h1 class="text-xl sm:text-2xl md:text-3xl font-bold truncate" style="color:var(--text)">Walkie Talkie Tracker</h1>
+              ${syncStatusBadge(syncStatus)}
+            </div>
+            <p class="text-xs sm:text-sm mt-0.5 truncate" style="color:var(--text-2)">รายการวิทยุ · ตรวจสภาพประจำเดือน · ประวัติซ่อม — แผนก ${SECTION}</p>
+          </div>
         </div>
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           ${renderInstallButton()}

@@ -56,7 +56,18 @@ function reportTable(title, rows) {
   `;
 }
 
-export function renderReport(state, activeMonth, SECTION) {
+function prepareReportBrandSvg(svgStr) {
+  if (!svgStr) return '';
+  return svgStr
+    .replace(/viewBox="[^"]*"/, 'viewBox="40 60 1120 200"')
+    .replace(/\bwidth="[^"]*"/, '')
+    .replace(/\bheight="[^"]*"/, '')
+    .replace(/filter="url\(#[^)]+\)"/g, '')
+    .replace(/<style>[\s\S]*?<\/style>/, '<style>.tube, .tube-s, .tube-b { animation: none !important; opacity: 1 !important; }</style>')
+    .replace('<svg ', '<svg style="width:252px;max-width:100%;height:auto;display:block;" ');
+}
+
+export function renderReport(state, activeMonth, SECTION, brandSvg = '') {
   const radioRows = buildMonthlyStatusRows(
     state.radios,
     state.inspections,
@@ -101,6 +112,17 @@ export function renderReport(state, activeMonth, SECTION) {
         </div>
         ${reportTable('วิทยุ', radioRows)}
         ${reportTable('อุปกรณ์เสริม', accessoryRows)}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:14px;border-top:1px solid #EDF1F9;flex-wrap:wrap;gap:16px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#131829">Walkie Talkie Tracker</div>
+            <div style="font-size:11px;color:#5F6980;margin-top:2px">ระบบติดตามวิทยุสื่อสารและอุปกรณ์เสริม · แผนก ${escapeHtml(SECTION)} (GC-M PTA)</div>
+          </div>
+          ${
+            brandSvg
+              ? `<div style="display:flex;align-items:center;justify-content:flex-end">${prepareReportBrandSvg(brandSvg)}</div>`
+              : ''
+          }
+        </div>
       </div>
     </div>
   `;

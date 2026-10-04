@@ -181,7 +181,7 @@ function renderActiveTab() {
     case 'repairs':
       return renderRepairs(state);
     case 'report':
-      return renderReport(state, activeMonth, SECTION);
+      return renderReport(state, activeMonth, SECTION, brandDockLightSvg);
     default:
       return '';
   }
